@@ -8,9 +8,10 @@ transient关键字：不需要被序列化的字段修饰符
 2、根据业务需要，决定一些字段不需要被序列化。
 
 ## ConcurrentHashmap
+
 以jdk1.8为基础解析一下concurrenthashmap包
-源码解读
-核心数据结构：数组、链表、红黑树
+
+源码解读核心数据结构：数组、链表、红黑树
 [HashMap? ConcurrentHashMap? 相信看完这篇没人能难住你！ | crossoverJie’s Blog](https://crossoverjie.top/2018/07/23/java-senior/ConcurrentHashMap/)
 put方法
 

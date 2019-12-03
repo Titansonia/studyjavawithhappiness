@@ -1,23 +1,59 @@
-# jdk1.8 ConcurrentHashmap
-#study/JAVA/concurrent
+# ConcurrentHashMap jdk1.8 
 
-transient关键字：不需要被序列化的字段修饰符
+
+
+ConcurrentHashMap是java并发编程中十分重要的容器类，它来自java.util.concurrent包。在jdk1.8中这里做了一些更新，比如使用了红黑树优化查询性能，再比如使用到了无锁CAS和synchronized结合的方法，替代了jdk1.7中分段锁的并发解决方案，同时使用到了volatile关键字，对于学习JAVA并发编程来说，是非常值得一看值得参考的源代码。本文以分析jdk1.8下的ConcurrentHashMap为切入点，主要介绍ConcurrentHashMap的核心数据结构、核心读写方法，并由此引申介绍其中用到的算法和技术，如红黑树、transient、volatile关键字、锁技术等等。
+
+ConcurrentHashMap的核心数据结构包括数组、链表和红黑树，和jdk1.7相比最大的区别，使用红黑树提升了查询的性能，避免链表无限增长。
+
+## ConcurrentHashMap核心数据结构
+
+
+
+![concurrenthashmap datastructure](https://raw.githubusercontent.com/Titansonia/studyjavawithhappiness/master/pics/ds.jpg)
+
+由上图所示，ConcurrentHashMap包含一个有限长度的链表数组，链表在超过阈值时会树化为一颗以当前桶的第一个节点为根节点的红黑树，数组长度超过阈值将进行数组扩容。
+
+代码中的定义方式为
+
+![nodearray](https://raw.githubusercontent.com/Titansonia/studyjavawithhappiness/master/pics/nodearray.jpg)
+
+ConcurrentHashMap类内部定义了一个静态类Node<K,V>，表示每一个节点，每一个节点包含当前节点key的哈希值hash、key值、value值、以及指向下一个节点的next指针。其中，value和next都是volatile类型，保证内存可见性。
+
+![node](https://raw.githubusercontent.com/Titansonia/studyjavawithhappiness/master/pics/node.jpg)
+
+- **put方法**
+
+![concurrenthashmap put](https://raw.githubusercontent.com/Titansonia/studyjavawithhappiness/master/pics/conput.jpg)
+
+1. 对key计算哈希值hashcode
+2. 遍历哈希数组
+3. 根据哈希值确定桶的位置，判断当前桶为空，CAS自旋写入
+4. 判断当前数组需要扩容，扩容数组
+5. 当前桶不为空且不需要扩容时，使用synchronized关键字对代码块加锁，写入数据
+6. 判断当前节点为红黑树节点，使用红黑树插入的方式写入
+7. 如果链表长度大于TREEIFY_THRESHOLD，要将当前链表转换为红黑树
+
+- **get方法**
+
+由于使用了volatile关键字，保证了内存的可见性，get方法无需加锁就可以获取到最新的值
+
+![](https://raw.githubusercontent.com/Titansonia/studyjavawithhappiness/master/pics/conget.jpg)
+
+1. 对key计算哈希值hashcode
+2. 根据key查找对应的value，find根据e的类型为Node或者TreeNode选择不同的实现，如果是红黑树则使用红黑树查询
+
+TreeNode的find方法
+
+![](https://raw.githubusercontent.com/Titansonia/studyjavawithhappiness/master/pics/treenodeget.jpg)
+
+## transient关键字：不需要被序列化的字段修饰符
+
 使用场景：
+
 1、 类中的字段值可以根据其它字段推导出来，如一个长方形类有三个属性：长度、宽度、面积（示例而已，一般不会这样设计），那么在序列化的时候，面积这个属性就没必要被序列化了；
 
 2、根据业务需要，决定一些字段不需要被序列化。
-
-## ConcurrentHashmap
-
-以jdk1.8为基础解析一下concurrenthashmap包
-
-源码解读核心数据结构：数组、链表、红黑树
-[HashMap? ConcurrentHashMap? 相信看完这篇没人能难住你！ | crossoverJie’s Blog](https://crossoverjie.top/2018/07/23/java-senior/ConcurrentHashMap/)
-put方法
-
-![https://github.com/Titansonia/studyjavawithhappiness/blob/master/pics/concurrenthashmapput.jpg]()
-
-get方法
 
 ## 红黑树
 红黑树的本质是一颗平衡二叉搜索树
@@ -67,9 +103,7 @@ E2：插入节点的叔叔节点是黑色或不存在：
 ![](concurrenthashmap/2392382-fa2b78271263d2c8.png)
 红黑树的生长是自底向上的
 
-参考资料
-[30张图带你彻底理解红黑树 - 简书](https://www.jianshu.com/p/e136ec79235c)
-[【Java入门提高篇】Day25 史上最详细的HashMap红黑树解析 - 弗兰克的猫 - 博客园](https://www.cnblogs.com/mfrank/p/9227097.html)
+https://www.cnblogs.com/mfrank/p/9227097.html)
 
 再哈希rehash
 使用红黑树查询
@@ -91,3 +125,15 @@ synchronized优化原理可以参考这一篇，写得很棒 https://aijishu.com
 写写并发
 
 锁和CAS
+
+
+
+参考资料
+
+[JAVA api doc](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentHashMap.html)
+
+[HashMap? ConcurrentHashMap? 相信看完这篇没人能难住你！ | crossoverJie’s Blog](https://crossoverjie.top/2018/07/23/java-senior/ConcurrentHashMap/)
+
+30张图带你彻底理解红黑树 - 简书](https://www.jianshu.com/p/e136ec79235c)
+
+[【Java入门提高篇】Day25 史上最详细的HashMap红黑树解析 - 弗兰克的猫 - 博客园](
